@@ -2,7 +2,31 @@
 
 一款聚焦于**纯浏览器端**视频生成库，提供高层次抽象封装，无需掌握音视频底层技术，即可通过编程方式快速生成视频。
 ~~顺便兼容`nodejs` `bun` 运行时~~。
-> **此项目还未完成**
+
+> **核心基础能力**
+> - [x] MediaFile：提供 URL/Blob/File 等多方式的便捷创建
+> - [x] MediaVideo：时间维度的切片
+> - [x] MediaVideo：音频切片（补充：与视频切片时间轴对齐，支持单独导出音频切片）
+> - [x] MediaVideo：创建基于时间区间的 Render（补充：支持分辨率适配）
+> - [x] 支持跨视频分辨率：若不统一自动cover的方式自适应宽高
+> - [x] 支持跨视频 FPS：按照输出视频的 FPS 从输入视频中抽取
+> - [x] MediaVideo：生成 AudioBuffer 异步迭代器（补充：支持音频格式兼容）
+> - [x] MediaVideo：支持每一帧transform，用户可在原视频画面之上自由绘制
+> - [x] MediaStitcher：抽象基于时间区间的 Render 管理（补充：支持多视频叠加，后者在前者画面之上）
+> - [x] MediaStitcher：抽象基于时间区间的 AudioBuffer 异步迭代器管理（补充：支持音频混合）
+> - [x] MediaStitcher: 支持秒和帧两种单位
+> - [ ] MediaAudio：支持从 URL/Blob/File 等方式创建实例
+> - [ ] MediaAudio：生成 AudioBuffer 异步迭代器（与 MediaVideo 音频迭代器接口统一）
+> - [ ] MediaSubtitle：单条字幕绘制（支持字体、颜色、位置、字号、背景透明度定制）
+> 
+> **扩展能力** 
+> - [x] WebVTT 字幕解析支持（补充：解析为结构化字幕数据）
+>
+> **工程化/落地能力**
+> - [x] 异常处理： 阻塞生成视频的都抛异常，如不支持webcode、视频文件没有视频轨道等
+> - [x] 进度回调：帧渲染进度
+> - [x] 结果导出：Blob
+> - [ ] 自动打包到NPM
 
 ## 核心定位
 本库专注于**降低视频生成门槛**，聚焦视频生成的核心场景快速落地。若你有更精细化的音视频处理需求，推荐使用底层能力更丰富的 `mediabunny` 库。
@@ -31,24 +55,25 @@ npm i -s xxx
 ```
 
 ## 使用
-### 视频拼接
+### 视频和音频都可以自由切片和控制播放时间
 ```ts
 async function test2() {
     let p = simpleLog("")
-    const video1origin = await MediaVideo.fromUrl("https://sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4")
+    const video1origin = await MediaVideo.fromUrl("https://vod.pipi.cn/fec9203cvodtransbj1251246104/ccff07ce5285890807898977876/v.f42906.mp4")
     const {width,height} = video1origin.getWidthAndHeight()
-    // 从3秒开始 持续5秒的片段
+    // 从3秒开始 持续10秒的片段
     const video1 = video1origin.sliceRange({
         startInSeconds: 3,
-        durationInSeconds: 5
+        durationInSeconds: 10
     })
-    const video2orogin = await MediaVideo.fromUrl("https://vjs.zencdn.net/v/oceans.mp4")
-    // 只要两秒的片段
+    const video2orogin = await MediaVideo.fromUrl("https://vod.pipi.cn/fec9203cvodtransbj1251246104/aa5308fc5285890804986750388/v.f42906.mp4")
+
+    // 10秒的片段
     const video2 = video2orogin.sliceRange({
         startInSeconds: 0,
-        durationInSeconds: 2
+        durationInSeconds: 10
     })
-    let mediaStitcher = MediaStitcher.init({
+    const blob = await MediaStitcher.init({
         duration: Unit.fromSeconds(
             video1.getDurationInSeconds() +
             video2.getDurationInSeconds()
@@ -56,19 +81,35 @@ async function test2() {
         width: width,
         height: height
     })
-    mediaStitcher.addRenderRange({
+    // 添加第一个视频的画面
+    .addRenderRange({
         start: Unit.fromSeconds(0),
         duration: Unit.fromSeconds(video1.getDurationInSeconds())
-    },video1)
-
-    mediaStitcher.addRenderRange({
+    },video1.createRender())
+    // 添加第二个视频的画面
+    .addRenderRange({
         start: Unit.fromSeconds(video1.getDurationInSeconds()),
         duration: Unit.fromSeconds(video2.getDurationInSeconds())
-    },video2)
-
-    const blob = await mediaStitcher.deinitAndFinalize((current,total)=>{
+    },video2.createRender())
+    // 在第一个视频画面区间添加第一个视频的声音
+    .addAudio({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(video1.getDurationInSeconds())
+    },video1.iterAudio())
+    // 混合第二个视频的声音
+    .addAudio({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(video1.getDurationInSeconds())
+    },video2.iterAudio())
+    // 在第二个视频画面区间添加第二个视频的声音
+    .addAudio({
+        start: Unit.fromSeconds(video1.getDurationInSeconds()),
+        duration: Unit.fromSeconds(video2.getDurationInSeconds())
+    },video2.iterAudio())
+    .deinitAndFinalize((current,total)=>{
         p.innerText = current + "/" + total + " frames"
     })
+
     const url = URL.createObjectURL(blob)
     p.innerHTML = `
         <video controls src="${url}" />

@@ -6,32 +6,23 @@ export type Timerange = {
     start: Unit
 }
 
-export type RenderableContext = {
+export type RenderContext = {
     timerange: Timerange,
     currentFrameInOutput: number
 } & Context
-/**
- *  操作canvas画出视频的每一帧
- */
-export interface Renderable {
-    /**
-     * 每一帧渲染调用render一次
-     * @param currentFrame 当前正在渲染的帧
-     * @param context 视频相关上下文
-     */
-    render(
-        currentFrame: number,
-        context: RenderableContext
-    ):Promise<void>
-}
 
-export type AudioRange = {
-    file: File | string,
-    range: Timerange
-}
-export interface AudioFile {
-    getAudio() : AudioRange;
-}
+
+export type Render = (
+    currentFrame: number,
+    context: RenderContext
+) => Promise<void>
+
+export type AsyncAudioBuffer = (duration: number) => AsyncGenerator<{
+    timestamp: number;
+    durationInSeconds: number;
+    buff: AudioBuffer;
+}>
+
 export type Context = {
     duration: Unit,
     readonly fps: number,
@@ -45,6 +36,7 @@ export type MediaErrorStatus = "deinited"
 | "not_support_video_codec"
 | "not_support_audio_codec"
 | "no_video_track"
+| "no_audio_track"
 
 export class MediaError extends Error {
     status?: MediaErrorStatus

@@ -1,5 +1,5 @@
-import { BufferTarget, CanvasSource, getFirstEncodableAudioCodec, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, QUALITY_HIGH, TextSubtitleSource, WebMOutputFormat } from "mediabunny"
-import { MediaError, type AudioFile, type Context, type Renderable, type Timerange } from "./const"
+import { AudioBufferSource, BufferTarget, CanvasSource, getFirstEncodableAudioCodec, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_MEDIUM, TextSubtitleSource, WebMOutputFormat } from "mediabunny"
+import { MediaError, type AsyncAudioBuffer, type Context, type Render, type Timerange } from "./const"
 import {Unit} from "./Unit"
 
 
@@ -7,8 +7,8 @@ export class MediaStitcher {
     context: Context 
 
     deinited: boolean = false
-    renderList: [Timerange,Renderable][] = []
-    audioList: [Timerange,AudioFile][] = []
+    renderList: [Timerange,Render][] = []
+    audioList: [Timerange, AsyncAudioBuffer][] = []
     webvtt?: string
 
     constructor(ctx:Context) {
@@ -42,19 +42,13 @@ export class MediaStitcher {
         })
     }
 
-    public addRenderRange(timerange:Timerange,render: Renderable["render"] | Renderable) {
-        let renderItem: Renderable
-        if(typeof render == "function") {
-            renderItem = {render: render}
-        } else {
-            renderItem = render
-        }
-        this.renderList.push([timerange,renderItem])
+    public addRenderRange(timerange:Timerange,render: Render) {
+        this.renderList.push([timerange,render])
         return this
     }
 
-    public addAudio(timerange:Timerange,audioFile: AudioFile) {
-        this.audioList.push([timerange,audioFile])
+    public addAudio(timerange:Timerange,iter: AsyncAudioBuffer) {
+        this.audioList.push([timerange,iter])
         return this
     }
     public setWebvtt(webvtt:string) {
@@ -107,7 +101,16 @@ export class MediaStitcher {
             codec: videoCodec,
             bitrate: QUALITY_HIGH
         })
-        output.addVideoTrack(videoSource)
+        output.addVideoTrack(videoSource,{
+            name: "vallino-video"
+        })
+
+        const audioSource = new AudioBufferSource({
+            codec: audioCodec,
+            bitrate: QUALITY_MEDIUM
+        })
+        output.addAudioTrack(audioSource,{name:"vallino-audio"})
+        
         await output.start()
 
         // 处理视频
@@ -127,7 +130,7 @@ export class MediaStitcher {
             canvas?.clearRect(0,0,ctx.canvas.width,ctx.canvas.height)
             for(const [range,render] of list) {
                 const startInFrames = range.start.toFrames(ctx.fps)
-                await render.render(currentFrame - startInFrames,{
+                await render(currentFrame - startInFrames,{
                     ...ctx,
                     timerange: range,
                     currentFrameInOutput: currentFrame
@@ -143,6 +146,27 @@ export class MediaStitcher {
         }
 
         videoSource.close()
+
+        const audioContext = new OfflineAudioContext(
+            ctx.numberOfChannels,
+            ctx.duration.toSeconds(ctx.fps) * ctx.sampleRate,
+            ctx.sampleRate
+        )
+
+        for(const [range,iter] of this.audioList) {
+            const start  = range.start.toSeconds(ctx.fps)
+            const duration = range.duration.toSeconds(ctx.fps)
+            for await (const audioB of iter(duration)) {
+                let node = audioContext.createBufferSource()
+                node.buffer = audioB.buff
+                node.connect(audioContext.destination)
+                node.start(start + audioB.timestamp,0,audioB.durationInSeconds)
+            }
+        }
+
+        await audioSource.add(await audioContext.startRendering())
+        audioSource.close()
+        
         await output.finalize()
         return new Blob([output.target.buffer!],{type: output.format.mimeType})
     }

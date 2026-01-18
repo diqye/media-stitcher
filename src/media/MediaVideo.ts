@@ -1,5 +1,5 @@
-import { ALL_FORMATS, CanvasSink, Input, InputAudioTrack, InputVideoTrack } from "mediabunny"
-import { MediaError, type Renderable, type RenderableContext } from "../const"
+import { ALL_FORMATS, AudioBufferSink, CanvasSink, Input, InputAudioTrack, InputVideoTrack } from "mediabunny"
+import { MediaError, type AsyncAudioBuffer, type Context, type Render, type RenderContext, type Timerange } from "../const"
 import { MediaFile } from "./MediaFile"
 import { Unit } from "../Unit"
 
@@ -13,14 +13,39 @@ type VideoContext = {
     /**
      * 未实现 TODO
      */
-    speed: number
+    speed: number,
 }
-export class MediaVideo implements Renderable {
+export class MediaVideo {
     ctx: VideoContext
     videoSinkCached?: CanvasSink
+    transformFn?: (canvas:OffscreenCanvas | HTMLCanvasElement,ctx:RenderContext,currentFrame:number) => Promise<typeof canvas>
+
 
     private constructor(ctx:VideoContext) {
         this.ctx = ctx
+    }
+
+    iterAudio(): AsyncAudioBuffer {
+        const that = this
+        return async function*(duration:number) {
+            if (that.ctx.audioTrack == null) throw MediaError.fromStatus("no_audio_track", "该视频没有音频轨道")
+            const sink = new AudioBufferSink(that.ctx.audioTrack)
+            const range = that.ctx.range
+            const durationInSeconds = Math.min(
+                range.durationInSeconds,
+                duration
+            )
+            const start = range.startInSeconds
+            const end = start + durationInSeconds
+            console.log(start,end)
+            for await (const audioBuff of sink.buffers(start, end)) {
+                yield {
+                    timestamp: Math.abs(audioBuff.timestamp - start),
+                    durationInSeconds: audioBuff.duration,
+                    buff: audioBuff.buffer
+                }
+            }
+        }
     }
     static async fromMediaFile(file:MediaFile) {
         const source = await file.createSource()
@@ -55,7 +80,11 @@ export class MediaVideo implements Renderable {
         return this.fromMediaFile(MediaFile.fromUrl(url))
     }
 
-    getDurationInSeconds() {
+    public transform(fn: typeof this.transformFn) {
+        this.transformFn = fn
+        return this
+    }
+    public getDurationInSeconds() {
         return this.ctx.range.durationInSeconds
     }
 
@@ -63,7 +92,7 @@ export class MediaVideo implements Renderable {
      * 获取视频原始宽高
      * @returns 视频的分辨率 没有视频轨道返回0x0
      */
-    getWidthAndHeight() {
+    public getWidthAndHeight() {
         return {
             width: this.ctx.videoTrack?.displayWidth ?? 0,
             height: this.ctx.videoTrack?.displayHeight ?? 0
@@ -81,29 +110,30 @@ export class MediaVideo implements Renderable {
             }
         })
     }
-    async render(currentFrame: number, context:RenderableContext): Promise<void> {
-        const ctx = this.ctx
-        if(ctx.videoTrack == null) throw MediaError.fromStatus("no_video_track","该文件没有视频轨道")
 
-        if(this.videoSinkCached == null) {
-            this.videoSinkCached = new CanvasSink(ctx.videoTrack,{
-                fit: "cover",
-                width: context.canvas.width,
-                height: context.canvas.height
-            })
+    createRender() : Render {
+        return async (currentFrame,context) => {
+            const ctx = this.ctx
+            if(ctx.videoTrack == null) throw MediaError.fromStatus("no_video_track","该文件没有视频轨道")
+            if(this.videoSinkCached == null) {
+                this.videoSinkCached = new CanvasSink(ctx.videoTrack,{
+                    fit: "cover",
+                    width: context.canvas.width,
+                    height: context.canvas.height
+                })
+            }
+            const sink = this.videoSinkCached
+            const startTime = ctx.range.startInSeconds
+            const currentSeconds = startTime + Unit.fromFrames(currentFrame).toSeconds(context.fps)
+            const targetCurrent = Math.min(currentSeconds, startTime + ctx.range.durationInSeconds)
+
+            const canvasWrapped = await sink.getCanvas(targetCurrent)
+            if(canvasWrapped == null) {
+                return
+            }
+            const canvas = await this.transformFn?.(canvasWrapped.canvas,context,currentFrame) ?? canvasWrapped.canvas
+            context.canvas.getContext("2d")?.drawImage(canvas,0,0)
         }
-
-        const sink = this.videoSinkCached
-        const startTime = ctx.range.startInSeconds
-        const currentSeconds = startTime + Unit.fromFrames(currentFrame).toSeconds(context.fps)
-        const targetCurrent = Math.min(currentSeconds, startTime + ctx.range.durationInSeconds)
-
-        const canvasWrapped = await sink.getCanvas(targetCurrent)
-        if(canvasWrapped == null) {
-            return
-        }
-        context.canvas.getContext("2d")?.drawImage(canvasWrapped.canvas,0,0)
     }
-
 
 }
