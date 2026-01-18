@@ -1,5 +1,5 @@
 export class Unit {
-    raw: {
+    private raw: {
         cos: "frames",
         v: number
     } | {

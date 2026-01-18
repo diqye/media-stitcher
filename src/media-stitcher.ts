@@ -42,8 +42,14 @@ export class MediaStitcher {
         })
     }
 
-    public addRenderRange(timerange:Timerange,render: Renderable) {
-        this.renderList.push([timerange,render])
+    public addRenderRange(timerange:Timerange,render: Renderable["render"] | Renderable) {
+        let renderItem: Renderable
+        if(typeof render == "function") {
+            renderItem = {render: render}
+        } else {
+            renderItem = render
+        }
+        this.renderList.push([timerange,renderItem])
         return this
     }
 
@@ -116,11 +122,16 @@ export class MediaStitcher {
                     return true
                 }
                 return false
-            }).map(a=>a[1])
+            })
             let canvas = ctx.canvas.getContext("2d")
             canvas?.clearRect(0,0,ctx.canvas.width,ctx.canvas.height)
-            for(const render of list) {
-                await render.render(currentFrame,ctx)
+            for(const [range,render] of list) {
+                const startInFrames = range.start.toFrames(ctx.fps)
+                await render.render(currentFrame - startInFrames,{
+                    ...ctx,
+                    timerange: range,
+                    currentFrameInOutput: currentFrame
+                })
             }
             await videoSource.add(
                 Unit.fromFrames(currentFrame).toSeconds(ctx.fps),

@@ -6,6 +6,10 @@ export type Timerange = {
     start: Unit
 }
 
+export type RenderableContext = {
+    timerange: Timerange,
+    currentFrameInOutput: number
+} & Context
 /**
  *  操作canvas画出视频的每一帧
  */
@@ -17,7 +21,7 @@ export interface Renderable {
      */
     render(
         currentFrame: number,
-        context:Context
+        context: RenderableContext
     ):Promise<void>
 }
 
@@ -40,6 +44,7 @@ export type Context = {
 export type MediaErrorStatus = "deinited"
 | "not_support_video_codec"
 | "not_support_audio_codec"
+| "no_video_track"
 
 export class MediaError extends Error {
     status?: MediaErrorStatus

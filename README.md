@@ -2,6 +2,7 @@
 
 一款聚焦于**纯浏览器端**视频生成库，提供高层次抽象封装，无需掌握音视频底层技术，即可通过编程方式快速生成视频。
 ~~顺便兼容`nodejs` `bun` 运行时~~。
+> **此项目还未完成**
 
 ## 核心定位
 本库专注于**降低视频生成门槛**，聚焦视频生成的核心场景快速落地。若你有更精细化的音视频处理需求，推荐使用底层能力更丰富的 `mediabunny` 库。
@@ -29,42 +30,84 @@ npm
 npm i -s xxx
 ```
 
-## 场景
-### 定制化帧
+## 使用
+### 视频拼接
 ```ts
+async function test2() {
+    let p = simpleLog("")
+    const video1origin = await MediaVideo.fromUrl("https://sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4")
+    const {width,height} = video1origin.getWidthAndHeight()
+    // 从3秒开始 持续5秒的片段
+    const video1 = video1origin.sliceRange({
+        startInSeconds: 3,
+        durationInSeconds: 5
+    })
+    const video2orogin = await MediaVideo.fromUrl("https://vjs.zencdn.net/v/oceans.mp4")
+    // 只要两秒的片段
+    const video2 = video2orogin.sliceRange({
+        startInSeconds: 0,
+        durationInSeconds: 2
+    })
+    let mediaStitcher = MediaStitcher.init({
+        duration: Unit.fromSeconds(
+            video1.getDurationInSeconds() +
+            video2.getDurationInSeconds()
+        ),
+        width: width,
+        height: height
+    })
+    mediaStitcher.addRenderRange({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(video1.getDurationInSeconds())
+    },video1)
+
+    mediaStitcher.addRenderRange({
+        start: Unit.fromSeconds(video1.getDurationInSeconds()),
+        duration: Unit.fromSeconds(video2.getDurationInSeconds())
+    },video2)
+
+    const blob = await mediaStitcher.deinitAndFinalize((current,total)=>{
+        p.innerText = current + "/" + total + " frames"
+    })
+    const url = URL.createObjectURL(blob)
+    p.innerHTML = `
+        <video controls src="${url}" />
+    `
+}
+```
+### 定制帧
+```ts
+// 以下代码生成5s的视频
 async function generate5s() {
-    simpleLog("测试1: 生成5秒视频")
     let p = simpleLog("")
 
-    // 初始化一个5s的视频，按照行业约定调用init 后面必调用deinit
+    // 初始化，按照约定调用init 后面必有deinit
     let mediaStitcher = MediaStitcher.init({
         duration: Unit.fromSeconds(5)
     })
 
     // 从0 - 5s 这个时间区间的帧渲染调用我
     mediaStitcher.addRenderRange({
-        start: Unit.fromFrames(0),
+        start: Unit.fromSeconds(0),
         duration: Unit.fromSeconds(5)
-    },{
-        // 直接在视频中间画出当前时间
-       async render (currentFrame: number, context: Context) {
-            let canvas = context.canvas
-            let twoD = canvas.getContext("2d")
-            if(twoD == null) throw new Error("null 2d")
-            twoD.save()
-            twoD.textAlign = "center"
-            twoD.font = "48px Arial"
-            twoD.fillStyle = "#fff"
-            twoD.fillText(
-                Unit.fromFrames(currentFrame).toSeconds(context.fps).toFixed(2),
-                canvas.width / 2,
-                canvas.height / 2
-            )
-            twoD.restore()
-        }
+    }, async (currentFrame, context) => {
+        // 在视频中间位置画出视频已播放了的时间
+        let canvas = context.canvas
+        let twoD = canvas.getContext("2d")
+        if (twoD == null) throw new Error("null 2d")
+        twoD.save()
+        twoD.textAlign = "center"
+        twoD.font = "48px Arial"
+        twoD.fillStyle = "#fff"
+        twoD.fillText(
+            Unit.fromFrames(currentFrame).toSeconds(context.fps).toFixed(2),
+            canvas.width / 2,
+            canvas.height / 2
+        )
+        twoD.restore()
     })
 
-    // 释放资源，顺便拿到最终的视频
+    // deinit 释放资源，顺便拿到最终的视频
     const blob = await mediaStitcher.deinitAndFinalize((current,total)=>{
         p.innerText = current + "/" + total + " frames"
     })

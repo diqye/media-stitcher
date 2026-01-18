@@ -1,9 +1,9 @@
 {
   "name": "media-stitcher",
-  "module": "index.ts",
+  "module": "src/index.ts",
   "type": "module",
   "scripts": {
-    "dev": "bun --hot src/test/index.html"
+    "dev": "bun --hot test/index.html"
   },
   "devDependencies": {
     "@types/bun": "latest"
