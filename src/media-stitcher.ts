@@ -140,7 +140,6 @@ export class MediaStitcher {
                 Unit.fromFrames(currentFrame).toSeconds(ctx.fps),
                 Unit.fromFrames(1).toSeconds(ctx.fps)
             )
-
             progress?.(currentFrame,totalInFrames)
             currentFrame++
         }

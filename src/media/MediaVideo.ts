@@ -2,6 +2,7 @@ import { ALL_FORMATS, AudioBufferSink, CanvasSink, Input, InputAudioTrack, Input
 import { MediaError, type AsyncAudioBuffer, type Context, type Render, type RenderContext, type Timerange } from "../const"
 import { MediaFile } from "./MediaFile"
 import { Unit } from "../Unit"
+import { createBase } from "./MediaBase"
 
 type VideoContext = {
     videoTrack?: InputVideoTrack,
@@ -15,13 +16,13 @@ type VideoContext = {
      */
     speed: number,
 }
-export class MediaVideo {
+export class MediaVideo extends createBase<Promise<MediaVideo>>() {
     ctx: VideoContext
     videoSinkCached?: CanvasSink
     transformFn?: (canvas:OffscreenCanvas | HTMLCanvasElement,ctx:RenderContext,currentFrame:number) => Promise<typeof canvas>
 
-
     private constructor(ctx:VideoContext) {
+        super()
         this.ctx = ctx
     }
 
@@ -37,7 +38,6 @@ export class MediaVideo {
             )
             const start = range.startInSeconds
             const end = start + durationInSeconds
-            console.log(start,end)
             for await (const audioBuff of sink.buffers(start, end)) {
                 yield {
                     timestamp: Math.abs(audioBuff.timestamp - start),
@@ -47,7 +47,7 @@ export class MediaVideo {
             }
         }
     }
-    static async fromMediaFile(file:MediaFile) {
+    static override async fromMediaFile(file:MediaFile) {
         const source = await file.createSource()
         let input = new Input({
             source: source,
@@ -65,19 +65,6 @@ export class MediaVideo {
                 durationInSeconds: duration ?? 0
             }
         })
-    }
-
-    static async fromFile(file:File) {
-        return this.fromMediaFile(MediaFile.fromFile(file))
-    }
-    static async fromBlob(blob:Blob) {
-        return this.fromMediaFile(MediaFile.fromBlob(blob))
-    }
-    static async fromBuffer(buffer:BufferSource) {
-        return this.fromMediaFile(MediaFile.fromBuffer(buffer))
-    }
-    static async fromUrl(url:string) {
-        return this.fromMediaFile(MediaFile.fromUrl(url))
     }
 
     public transform(fn: typeof this.transformFn) {

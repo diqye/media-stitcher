@@ -1,5 +1,6 @@
-import {MediaStitcher, MediaVideo, Unit} from "../src/index"
-
+import {MediaAudio, MediaImage, MediaStitcher, MediaVideo, Unit} from "../src/index"
+// @ts-ignore
+import mp3 from "./asserts/sample-15s.mp3"
 
 function simpleLog(text:string) {
     const p = document.createElement("p")
@@ -7,17 +8,33 @@ function simpleLog(text:string) {
     document.body.appendChild(p)
     return p
 }
-
-async function generate5s() {
-    let p = simpleLog("")
-    let mediaStitcher = MediaStitcher.init({
-        duration: Unit.fromSeconds(5)
+async function simpleStart() {
+    const div = document.createElement("div")
+    const button = document.createElement("button")
+    button.innerText = "点我开始"
+    div.appendChild(button)
+    document.body.appendChild(div)
+    await new Promise<void>(resolve=>{
+        button.onclick = () => {
+            resolve()
+        }
     })
-
-    mediaStitcher.addRenderRange({
+    return div
+}
+ 
+// 纯代码生成5s的视频
+async function generate5s() {
+    let div = await simpleStart()
+    // 初始化，行业约定有init 必有配套的deinit
+    const blob = await MediaStitcher.init({
+        duration: Unit.fromSeconds(5) //视频总是时长 5s
+    })
+    // 添加0-5s之间的视频渲染
+    .addRenderRange({
         start: Unit.fromSeconds(0),
         duration: Unit.fromSeconds(5)
     }, async (currentFrame, context) => {
+        // currentFrame 是在0-5s区间内的第几帧
         let canvas = context.canvas
         let twoD = canvas.getContext("2d")
         if (twoD == null) throw new Error("null 2d")
@@ -25,6 +42,8 @@ async function generate5s() {
         twoD.textAlign = "center"
         twoD.font = "48px Arial"
         twoD.fillStyle = "#fff"
+
+        // 每一帧都画上时间
         twoD.fillText(
             Unit.fromFrames(currentFrame).toSeconds(context.fps).toFixed(2),
             canvas.width / 2,
@@ -32,19 +51,19 @@ async function generate5s() {
         )
         twoD.restore()
     })
-
-    const blob = await mediaStitcher.deinitAndFinalize((current,total)=>{
-        p.innerText = current + "/" + total + " frames"
+    // 释放资源 + 获取最终的视频
+    .deinitAndFinalize((current,total)=>{
+        div.innerText = current + "/" + total + " frames"
     })
     const url = URL.createObjectURL(blob)
-    p.innerHTML = `
+    div.innerHTML = `
         <video controls src="${url}" />
     `
 }
 
 async function test2() {
-    let p = simpleLog("")
-    const video1origin = await MediaVideo.fromUrl("https://vod.pipi.cn/fec9203cvodtransbj1251246104/ccff07ce5285890807898977876/v.f42906.mp4")
+    let div = await simpleStart()
+    const video1origin = await MediaVideo.fromUrl(mp3)
     const {width,height} = video1origin.getWidthAndHeight()
     // 从3秒开始 持续10秒的片段
     const video1 = video1origin.sliceRange({
@@ -92,20 +111,56 @@ async function test2() {
         duration: Unit.fromSeconds(video2.getDurationInSeconds())
     },video2.iterAudio())
     .deinitAndFinalize((current,total)=>{
-        p.innerText = current + "/" + total + " frames"
+        div.innerText = current + "/" + total + " frames"
     })
 
     const url = URL.createObjectURL(blob)
-    p.innerHTML = `
+    div.innerHTML = `
         <video controls src="${url}" />
     `
 }
-async function runTest() {
-    // simpleLog("测试1，生成5秒的视频")
-    // await generate5s()
 
-    // simpleLog("测试2,视频拼接")
-    // await test2()
+// 图片 + 音频测试
+async function test3(){
+    let div = await simpleStart()
+    const audio = await MediaAudio.fromUrl(mp3)
+    const image1 =  MediaImage.fromUrl("https://picsum.photos/id/2/1000/800")
+    const image2 =  MediaImage.fromUrl("https://picsum.photos/id/1/500/300")
+    const blob = await MediaStitcher.init({
+        duration: Unit.fromSeconds(10),
+        width: 500,
+        height: 400
+    })
+    .addRenderRange({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(5)
+    },image1.createRender())
+    .addRenderRange({
+        start: Unit.fromSeconds(5),
+        duration: Unit.fromSeconds(5)
+    },image2.createRender())
+    .addAudio({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(10)
+    },audio.iterAudio())
+    .deinitAndFinalize((current,total)=>{
+        div.innerText = current + "/" + total + " frames"
+    })
+
+    const url = URL.createObjectURL(blob)
+    div.innerHTML = `
+        <video controls src="${url}" />
+    `
+}
+function runTest() {
+    simpleLog("测试1，生成5秒的视频")
+    generate5s()
+
+    simpleLog("测试2,视频拼接")
+    test2()
+
+    simpleLog("测试3,图片+音频")
+    test3()
 }
 
 await runTest()

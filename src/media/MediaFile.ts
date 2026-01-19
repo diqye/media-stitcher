@@ -54,5 +54,16 @@ export class MediaFile {
         }
         return new BufferSourceClass(await this.file.arrayBuffer())
     }
-    
+
+    private blobCached?: Blob 
+    async blob() {
+        if(this.blobCached != null) return this.blobCached
+        if(typeof this.file == "string") {
+            const resp = await fetch(this.file)
+            this.blobCached =  await resp.blob()
+            return this.blobCached
+        }
+        this.blobCached = new Blob([await this.file.bytes()])
+        return this.blobCached
+    }
 }
