@@ -1,17 +1,33 @@
 {
-  "name": "media-stitcher",
-  "module": "src/index.ts",
+  "name": "@diqye/media-stitcher",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
+   "repository": {
+    "type": "git",
+    "url": "git+git@github.com:diqye/media-stitcher.git"
+  },
+  "bugs": {
+    "url": "https://github.com/diqye/media-stitcher/issues"
+  },
+  "version": "0.1.0",
   "scripts": {
-    "dev": "bun --hot test/index.html"
+    "dev": "bun --hot test/index.html",
+    "build": "bun run build.ts"
   },
+  "keywords": ["media stitcher","type safe","video composor"], 
+  "files": [
+    "dist",
+    "package.json",
+    "README.md",
+    "README_EN.md",
+    "LICENSE"
+  ],
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
+    "@types/bun": "latest",
     "typescript": "^5"
   },
-  "dependencies": {
+  "peerDependencies": {
     "mediabunny": "^1.28.0"
   }
 }

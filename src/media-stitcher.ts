@@ -26,7 +26,7 @@ export class MediaStitcher {
         width?: number,
         height?: number,
         format?: Context["format"],
-        numberOfChannels?: number,
+        numberOfChannels?: 1 | 2,
         sampleRate?: number
     }) {
         return new MediaStitcher({
@@ -152,15 +152,21 @@ export class MediaStitcher {
             ctx.sampleRate
         )
 
-        for(const [range,iter] of this.audioList) {
+        for(const [range,createAudioBuff] of this.audioList) {
             const start  = range.start.toSeconds(ctx.fps)
             const duration = range.duration.toSeconds(ctx.fps)
-            for await (const audioB of iter(duration)) {
-                let node = audioContext.createBufferSource()
-                node.buffer = audioB.buff
-                node.connect(audioContext.destination)
-                node.start(start + audioB.timestamp,0,audioB.durationInSeconds)
-            }
+            const audiobuff = await createAudioBuff(duration)
+            const sourceStart = start + audiobuff.timestamp
+            let gain = audioContext.createGain()
+            gain.gain.setValueAtTime(0,sourceStart)
+            gain.gain.linearRampToValueAtTime(1,sourceStart + 0.002)
+            gain.gain.setValueAtTime(1,sourceStart + audiobuff.durationInSeconds - 0.002)
+            gain.gain.linearRampToValueAtTime(0,sourceStart + audiobuff.durationInSeconds)
+            let source = audioContext.createBufferSource()
+            source.buffer = audiobuff.buff
+            source.connect(gain)
+            gain.connect(audioContext.destination)
+            source.start(sourceStart,0,audiobuff.durationInSeconds)
         }
 
         await audioSource.add(await audioContext.startRendering())

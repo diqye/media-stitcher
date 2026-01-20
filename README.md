@@ -1,5 +1,7 @@
 # media-stitcher
 
+[English](./README_EN.md)
+
 一款聚焦于**纯浏览器端**视频生成库，提供高层次抽象封装，无需掌握音视频底层技术，即可通过编程方式快速生成视频。
 ~~顺便兼容`nodejs` `bun` 运行时~~。
 
@@ -19,18 +21,18 @@
 > - [x] MediaStitcher: 支持基于帧的canvas绘制
 > - [x] MediaAudio：支持从 URL/Blob/File 等方式创建实例
 > - [x] MediaAudio：生成 AudioBuffer 异步迭代器（与 MediaVideo 音频迭代器接口统一）
-> - [ ] MediaText：单条文本绘制（支持字体、颜色、位置、字号、背景透明度定制）
+> - [x] TextListRender：多条文本按照相对时间绘制（支持字体、颜色、位置、字号、背景透明度定制）
 > - [x] MediaImage：支持从 URL/Blob/File 等方式创建实例
 > - [x] MediaImage：Render功能
 > 
 > **扩展能力** 
-> - [x] WebVTT 字幕解析支持（补充：解析为结构化字幕数据）
+> - [x] WebVTT 字幕支持
 >
 > **工程化/落地能力**
 > - [x] 异常处理： 阻塞生成视频的都抛异常，如不支持webcodecs、视频文件没有视频轨道等
 > - [x] 进度回调：帧渲染进度
 > - [x] 结果导出：Blob
-> - [ ] 打包到NPM
+> - [x] 打包到NPM
 
 ## 核心定位
 本库专注于**降低视频生成门槛**，聚焦视频生成的核心场景快速落地。若你有更精细化的音视频处理需求，推荐使用底层能力更丰富的 `mediabunny` 库。
@@ -50,17 +52,12 @@
 
 bun
 ```zsh
-bun add xxx
+bun add @diqye/media-stitcher
 ```
 or 
 npm
 ```zsh
-npm i -s xxx
-```
-
-## 测试
-``` ts
-bun run dev
+npm i -s @diqye/media-stitcher
 ```
 
 ## 使用
@@ -69,7 +66,7 @@ bun run dev
 ```ts
 async function generate5s() {
     let div = await simpleStart()
-    // 初始化，行业约定有init 必有配套的deinit
+    // 初始化，行业习惯命名有init后面必有deinit
     const blob = await MediaStitcher.init({
         duration: Unit.fromSeconds(5) //视频总是时长 5s
     })
@@ -201,8 +198,10 @@ async function test2() {
     `
 }
 ```
+## 运行/测试 本项目
+``` ts
+bun run dev
+```
 
 ## 赞助
 本项目为**纯开源免费**的工具库，所有开发与维护均利用个人业余时间完成。
-
-~~如果这个工具库帮到了你，或是你认可我的开发理念，欢迎进行小额捐助 —— 你的支持会成为我持续迭代、修复问题、完善功能的重要动力。~~

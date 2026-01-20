@@ -5,4 +5,5 @@ export * from "./media/MediaFile"
 export * from "./media/MediaVideo"
 export * from "./media/MediaAudio"
 export * from "./media/MediaImage"
+export * from "./media/TextListRender"
 

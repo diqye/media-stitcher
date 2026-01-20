@@ -17,7 +17,7 @@ export type Render = (
     context: RenderContext
 ) => Promise<void>
 
-export type AsyncAudioBuffer = (duration: number) => AsyncGenerator<{
+export type AsyncAudioBuffer = (duration: number) => Promise<{
     timestamp: number;
     durationInSeconds: number;
     buff: AudioBuffer;
@@ -28,7 +28,7 @@ export type Context = {
     readonly fps: number,
     canvas: OffscreenCanvas,
     format: "mp4" | "webm",
-    numberOfChannels: number,
+    numberOfChannels: 1 | 2,
     sampleRate: number
 }
 

@@ -1,4 +1,4 @@
-import {MediaAudio, MediaImage, MediaStitcher, MediaVideo, Unit} from "../src/index"
+import {MediaAudio, MediaImage, MediaStitcher, MediaVideo, TextListRender, Unit} from "../src/index"
 // @ts-ignore
 import mp3 from "./asserts/sample-15s.mp3"
 
@@ -63,11 +63,11 @@ async function generate5s() {
 
 async function test2() {
     let div = await simpleStart()
-    const video1origin = await MediaVideo.fromUrl(mp3)
+    const video1origin = await MediaVideo.fromUrl("https://vod.pipi.cn/fec9203cvodtransbj1251246104/2cb008ef5285890807135914942/v.f42906.mp4")
     const {width,height} = video1origin.getWidthAndHeight()
-    // 从3秒开始 持续10秒的片段
+    // 从10秒开始 持续10秒的片段
     const video1 = video1origin.sliceRange({
-        startInSeconds: 3,
+        startInSeconds: 10,
         durationInSeconds: 10
     })
     const video2orogin = await MediaVideo.fromUrl("https://vod.pipi.cn/fec9203cvodtransbj1251246104/aa5308fc5285890804986750388/v.f42906.mp4")
@@ -99,17 +99,17 @@ async function test2() {
     .addAudio({
         start: Unit.fromSeconds(0),
         duration: Unit.fromSeconds(video1.getDurationInSeconds())
-    },video1.iterAudio())
+    },video1.createAudio())
     // 混合第二个视频的声音
     .addAudio({
         start: Unit.fromSeconds(0),
         duration: Unit.fromSeconds(video1.getDurationInSeconds())
-    },video2.iterAudio())
+    },video2.createAudio())
     // 在第二个视频画面区间添加第二个视频的声音
     .addAudio({
         start: Unit.fromSeconds(video1.getDurationInSeconds()),
         duration: Unit.fromSeconds(video2.getDurationInSeconds())
-    },video2.iterAudio())
+    },video2.createAudio())
     .deinitAndFinalize((current,total)=>{
         div.innerText = current + "/" + total + " frames"
     })
@@ -142,7 +142,107 @@ async function test3(){
     .addAudio({
         start: Unit.fromSeconds(0),
         duration: Unit.fromSeconds(10)
-    },audio.iterAudio())
+    },audio.createAudio())
+    .deinitAndFinalize((current,total)=>{
+        div.innerText = current + "/" + total + " frames"
+    })
+
+    const url = URL.createObjectURL(blob)
+    div.innerHTML = `
+        <video controls src="${url}" />
+    `
+}
+async function test4(){
+    let div = await simpleStart()
+    const blob = await MediaStitcher.init({
+        duration: Unit.fromSeconds(10),
+        width: 500,
+        height: 400,
+        fps: 15
+    })
+    .addRenderRange({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(10)
+    },TextListRender.fromTextList([{
+        text: "我是center",
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(2),
+        postion: "center"
+    },{
+        text: "我是top",
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(2),
+        postion: "top"
+    },{
+        text: "我是 默认",
+        start: Unit.fromSeconds(2),
+        duration: Unit.fromSeconds(2),
+        font: "50px Arial",
+        fillStyle: "pink"
+    },{
+        text: "我是 bottom",
+        start: Unit.fromSeconds(4),
+        duration: Unit.fromSeconds(2),
+        postion: "bottom",
+        font: "50px Arial",
+        fillStyle: "red"
+    }]).createReader())
+    .deinitAndFinalize((current,total)=>{
+        div.innerText = current + "/" + total + " frames"
+    })
+
+    const url = URL.createObjectURL(blob)
+    div.innerHTML = `
+        <video controls src="${url}" />
+    `
+}
+async function test5(){
+    let div = await simpleStart()
+    const audio = await MediaAudio.fromUrl("https://static-jx-admin.zmexing.com/jx/tts/E0oPBoSE7a.mp3")
+    const blob = await MediaStitcher.init({
+        duration: Unit.fromSeconds(20),
+        width: 500,
+        height: 400,
+        fps: 5
+    })
+    .addRenderRange({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(10)
+    },TextListRender.fromTextList([{
+        text: "我是center",
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(2),
+        postion: "center"
+    },{
+        text: "我是top",
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(2),
+        postion: "top"
+    },{
+        text: "我是 默认",
+        start: Unit.fromSeconds(2),
+        duration: Unit.fromSeconds(2),
+        font: "50px Arial",
+        fillStyle: "pink"
+    },{
+        text: "最后一个",
+        start: Unit.fromSeconds(4),
+        duration: Unit.fromSeconds(20),
+        postion: "center",
+        font: "50px Arial",
+        fillStyle: "red"
+    }]).createReader())
+    .addAudio({
+        start: Unit.fromSeconds(10),
+        duration: Unit.fromSeconds(20)
+    },audio.createAudio())
+    .addAudio({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(10)
+    },audio.sliceRange({
+        startInSeconds: 20,
+        durationInSeconds: 10
+    }).createAudio())
     .deinitAndFinalize((current,total)=>{
         div.innerText = current + "/" + total + " frames"
     })
@@ -161,6 +261,12 @@ function runTest() {
 
     simpleLog("测试3,图片+音频")
     test3()
+
+    simpleLog("测试4,文本绘制")
+    test4()
+
+    simpleLog("测试5, 去除声音杂音")
+    test5()
 }
 
 await runTest()

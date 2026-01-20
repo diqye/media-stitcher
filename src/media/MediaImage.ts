@@ -1,6 +1,6 @@
 import type { Render } from "../const"
 import { createBase } from "./MediaBase"
-import { MediaFile } from "./MediaFile"
+import type { MediaFile } from "./MediaFile"
 
 export class MediaImage extends createBase<MediaImage>() {
     mfile:MediaFile

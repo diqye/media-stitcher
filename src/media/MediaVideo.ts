@@ -1,8 +1,9 @@
 import { ALL_FORMATS, AudioBufferSink, CanvasSink, Input, InputAudioTrack, InputVideoTrack } from "mediabunny"
 import { MediaError, type AsyncAudioBuffer, type Context, type Render, type RenderContext, type Timerange } from "../const"
-import { MediaFile } from "./MediaFile"
+import type { MediaFile } from "./MediaFile"
 import { Unit } from "../Unit"
 import { createBase } from "./MediaBase"
+import { createAudioBuff } from "./createAudioBuff"
 
 type VideoContext = {
     videoTrack?: InputVideoTrack,
@@ -26,25 +27,11 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
         this.ctx = ctx
     }
 
-    iterAudio(): AsyncAudioBuffer {
-        const that = this
-        return async function*(duration:number) {
-            if (that.ctx.audioTrack == null) throw MediaError.fromStatus("no_audio_track", "该视频没有音频轨道")
-            const sink = new AudioBufferSink(that.ctx.audioTrack)
-            const range = that.ctx.range
-            const durationInSeconds = Math.min(
-                range.durationInSeconds,
-                duration
-            )
-            const start = range.startInSeconds
-            const end = start + durationInSeconds
-            for await (const audioBuff of sink.buffers(start, end)) {
-                yield {
-                    timestamp: Math.abs(audioBuff.timestamp - start),
-                    durationInSeconds: audioBuff.duration,
-                    buff: audioBuff.buffer
-                }
-            }
+    createAudio(): AsyncAudioBuffer {
+        return (duration:number) => {
+            if (this.ctx.audioTrack == null) throw MediaError.fromStatus("no_audio_track", "该视频没有音频轨道")
+            const range = this.ctx.range
+            return createAudioBuff(duration,range,this.ctx.audioTrack)
         }
     }
     static override async fromMediaFile(file:MediaFile) {
@@ -80,9 +67,12 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
      * @returns 视频的分辨率 没有视频轨道返回0x0
      */
     public getWidthAndHeight() {
+        if(this.ctx.videoTrack == null) {
+            throw MediaError.fromStatus("no_video_track","没有视频轨道")
+        }
         return {
-            width: this.ctx.videoTrack?.displayWidth ?? 0,
-            height: this.ctx.videoTrack?.displayHeight ?? 0
+            width: this.ctx.videoTrack.displayWidth ?? 1,
+            height: this.ctx.videoTrack.displayHeight ?? 1
         }
     }
     /**
