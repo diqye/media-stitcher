@@ -222,3 +222,7 @@ bun run dev
 
 ## Sponsorship
 This project is a **completely open-source and free** tool library, with all development and maintenance completed in the developer's spare time.
+
+If you find this tool helpful and you’re in a good mood, feel free to buy me a coffee, a Coke, or whatever small amount you’d like to spare. Every little bit is a huge encouragement for me to keep maintaining and updating this project.
+
+[sponsor](./test/asserts/sponsor.png)
