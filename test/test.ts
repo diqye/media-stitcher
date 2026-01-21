@@ -234,11 +234,13 @@ async function test5(){
     }]).createReader())
     .addAudio({
         start: Unit.fromSeconds(10),
-        duration: Unit.fromSeconds(20)
+        duration: Unit.fromSeconds(20),
+        playbackRate: 2
     },audio.createAudio())
     .addAudio({
         start: Unit.fromSeconds(0),
-        duration: Unit.fromSeconds(10)
+        duration: Unit.fromSeconds(10),
+        volume: 2
     },audio.sliceRange({
         startInSeconds: 20,
         durationInSeconds: 10
@@ -265,7 +267,7 @@ function runTest() {
     simpleLog("测试4,文本绘制")
     test4()
 
-    simpleLog("测试5, 去除声音杂音")
+    simpleLog("测试5, 解决声音click问题")
     test5()
 }
 

@@ -2,6 +2,7 @@
   "name": "@diqye/media-stitcher",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "author": "Vallino",
   "type": "module",
    "repository": {
     "type": "git",
@@ -10,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/diqye/media-stitcher/issues"
   },
-  "version": "0.1.0",
+  "version": "0.1.2",
   "scripts": {
     "dev": "bun --hot test/index.html",
     "build": "bun run build.ts"
@@ -21,7 +22,8 @@
     "package.json",
     "README.md",
     "README_EN.md",
-    "LICENSE"
+    "LICENSE",
+    "test/asserts/sponsor.png"
   ],
   "devDependencies": {
     "@types/bun": "latest",

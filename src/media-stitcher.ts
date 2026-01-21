@@ -3,12 +3,16 @@ import { MediaError, type AsyncAudioBuffer, type Context, type Render, type Time
 import {Unit} from "./Unit"
 
 
+type AudioRange = Timerange & {
+    volume?: number,
+    playbackRate?: number
+}
 export class MediaStitcher {
     context: Context 
 
     deinited: boolean = false
     renderList: [Timerange,Render][] = []
-    audioList: [Timerange, AsyncAudioBuffer][] = []
+    audioList: [AudioRange, AsyncAudioBuffer][] = []
     webvtt?: string
 
     constructor(ctx:Context) {
@@ -16,7 +20,7 @@ export class MediaStitcher {
     }
 
     /**
-     * 初始化一个缝合器
+     * 创建实例
      * @param params 默认 30 fps 500x500 mp4
      * @returns 
      */
@@ -42,19 +46,43 @@ export class MediaStitcher {
         })
     }
 
+    /**
+     * 将视频、图片和自定义canvas渲染到指定的时间区间
+     * @param timerange 从输出视频的什么时间开始持续多长时间
+     * @param render 渲染函数
+     * @returns 
+     */
     public addRenderRange(timerange:Timerange,render: Render) {
         this.renderList.push([timerange,render])
         return this
     }
 
-    public addAudio(timerange:Timerange,iter: AsyncAudioBuffer) {
-        this.audioList.push([timerange,iter])
+    /**
+     * 将音频合并到指定的时间区间
+     * @param timerange 从输出视频的什么时间开始持续多长时间, 音频和播放速度控制
+     * @param audioBufferFn 
+     * @returns 
+     */
+    public addAudio(range: AudioRange,audioBufferFn: AsyncAudioBuffer) {
+        this.audioList.push([range,audioBufferFn])
         return this
     }
+
+    /**
+     * 设置webvtt字幕
+     * @param webvtt 字幕
+     * @returns 
+     */
     public setWebvtt(webvtt:string) {
         this.webvtt = webvtt
         return this
     }
+
+    /**
+     * 释放资源并且合并成最终的视频
+     * @param progress 进度回调
+     * @returns 
+     */
     public async deinitAndFinalize(progress?:(currentFrame:number,totalInFrames:number)=>void) {
         if(this.deinited) {
             throw MediaError.fromStatus("deinited","资源已被释放")
@@ -157,14 +185,16 @@ export class MediaStitcher {
             const duration = range.duration.toSeconds(ctx.fps)
             const audiobuff = await createAudioBuff(duration)
             const sourceStart = start + audiobuff.timestamp
+            const volume = range.volume ?? 1
             let gain = audioContext.createGain()
             gain.gain.setValueAtTime(0,sourceStart)
-            gain.gain.linearRampToValueAtTime(1,sourceStart + 0.002)
-            gain.gain.setValueAtTime(1,sourceStart + audiobuff.durationInSeconds - 0.002)
+            gain.gain.linearRampToValueAtTime(volume,sourceStart + 0.002)
+            gain.gain.setValueAtTime(volume,sourceStart + audiobuff.durationInSeconds - 0.002)
             gain.gain.linearRampToValueAtTime(0,sourceStart + audiobuff.durationInSeconds)
             let source = audioContext.createBufferSource()
             source.buffer = audiobuff.buff
             source.connect(gain)
+            source.playbackRate.value = range.playbackRate ?? 1
             gain.connect(audioContext.destination)
             source.start(sourceStart,0,audiobuff.durationInSeconds)
         }

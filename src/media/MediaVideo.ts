@@ -27,6 +27,10 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
         this.ctx = ctx
     }
 
+    /**
+     * 创建音频Buffer供`MediaStitcher`使用
+     * @returns 供`MediaStitcher`使用的音频Buffer
+     */
     createAudio(): AsyncAudioBuffer {
         return (duration:number) => {
             if (this.ctx.audioTrack == null) throw MediaError.fromStatus("no_audio_track", "该视频没有音频轨道")
@@ -54,10 +58,20 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
         })
     }
 
+    /**
+     * 对视频帧做转换
+     * @param fn 转换函数
+     * @returns 
+     */
     public transform(fn: typeof this.transformFn) {
         this.transformFn = fn
         return this
     }
+
+    /**
+     * 视频时长
+     * @returns 视频时长
+     */
     public getDurationInSeconds() {
         return this.ctx.range.durationInSeconds
     }
@@ -76,7 +90,7 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
         }
     }
     /**
-     * 以时间为切片创建新的对象
+     * 从时间切片上创建新的实例
      */
     sliceRange(range:VideoContext["range"]) {
         return new MediaVideo({
@@ -87,7 +101,10 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
             }
         })
     }
-
+    /**
+     * 创建渲染函数以供`MediaStitcher`使用
+     * @returns 
+     */
     createRender() : Render {
         return async (currentFrame,context) => {
             const ctx = this.ctx

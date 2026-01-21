@@ -5,34 +5,48 @@
 A video generation library focused on **pure browser-side** usage, providing high-level abstract encapsulation. You can quickly generate videos programmatically without mastering underlying audio and video technologies.
 ~~Also compatible with `nodejs` and `bun` runtimes~~.
 
-> **Core Basic Capabilities**
-> - [x] MediaFile: Convenient creation via URL/Blob/File and other methods
-> - [x] MediaVideo: Support for instance creation from URL/Blob/File and other sources
-> - [x] MediaVideo: Time-based slicing
-> - [x] MediaVideo: Audio slicing (Supplement: Aligned with video slicing timeline, supports separate export of audio slices)
-> - [x] MediaVideo: Render (Supplement: Supports resolution adaptation)
-> - [x] Cross-video resolution support: Automatically adapts width and height using cover mode if not unified
-> - [x] Cross-video FPS support: Extracts frames from input videos according to the FPS of the output video
-> - [x] MediaVideo: Generates AudioBuffer async iterator (Supplement: Supports audio format compatibility)
-> - [x] MediaVideo: Supports per-frame transform, allowing users to freely draw on top of the original video frame
-> - [x] MediaStitcher: Abstract Render management based on time intervals (Supplement: Supports multi-video overlay, with latter videos on top of previous ones)
-> - [x] MediaStitcher: Abstract AudioBuffer async iterator management based on time intervals (Supplement: Supports audio mixing)
-> - [x] MediaStitcher: Supports both seconds and frames as units
-> - [x] MediaStitcher: Supports canvas drawing based on frames
-> - [x] MediaAudio: Support for instance creation from URL/Blob/File and other sources
-> - [x] MediaAudio: Generates AudioBuffer async iterator (Unified interface with MediaVideo audio iterator)
-> - [x] TextListRender: Draws multiple text entries according to relative time (Supports customization of font, color, position, size, and background transparency)
-> - [x] MediaImage: Support for instance creation from URL/Blob/File and other sources
-> - [x] MediaImage: Render functionality
-> 
-> **Extended Capabilities** 
-> - [x] WebVTT subtitle support 
+> Core Classes
 >
-> **Engineering/Deployment Capabilities**
-> - [x] Exception handling: Throws exceptions for issues blocking video generation (e.g., unsupported webcodecs, video files without video tracks)
-> - [x] Progress callback: Frame rendering progress
-> - [x] Result export: Blob
+> - [x] MediaStitcher: Stitching Class — Combines video, audio, images, and canvas into a single final video
+>   - [x] Supports frame and second as time units
+>   - [x] addRenderRange: Renders video, images, and custom canvas to a specified time interval
+>   - [x] addAudio: Merges audio into a specified time interval
+>   - [x] Automatic resolution adaptation
+>   - [x] Automatic FPS adaptation
+>   - [x] Supports setting volume and audio speed
+>   - [x] init: Creates an instance
+>   - [x] deinitAndFinalize: Releases resources and merges into the final video
+> - [x] MediaVideo: Video Media File Class
+>   - [x] fromXXX: Provides convenient instance creation via URL/Blob/File/`MediaFile` and other methods
+>   - [x] Offers functions to get basic information such as video duration and video width/height
+>   - [x] createRender: Creates a rendering function for `MediaStitcher`
+>   - [x] createAudio: Creates audio data function for `MediaStitcher`
+>   - [x] transform: Custom canvas transitions for each frame of the video
+>   - [x] sliceRange: Creates a new instance from a time slice
+> - [x] MediaFile: Media File Class
+>   - [x] fromXXX: Provides convenient instance creation via URL/Blob/File and other methods
+> - [x] MediaAudio: Audio Media File Class
+>   - [x] fromXXX: Provides convenient instance creation via URL/Blob/File/`MediaFile` and other methods
+>   - [x] sliceRange: Creates a new instance from a time slice
+>   - [x] createAudio: Creates audio data function for `MediaStitcher`
+>   - [x] getDurationInSeconds: Gets audio duration
+> - [x] TextListRender: Renders multiple lines of text into video
+>   - [x] fromTextList: Creates an instance from multiple lines of text
+>   - [x] handleTransform: Custom canvas
+>   - [x] createReader: Creates a rendering function for `MediaStitcher`
+> - [x] MediaImage: Media Image Class
+>   - [x] fromXXX: Provides convenient instance creation via URL/Blob/File/`MediaFile` and other methods
+>   - [x] createReader: Creates a rendering function for `MediaStitcher`
+>
+> Extended Capabilities
+> - [x] WebVTT subtitle support
+>
+> Engineering/Implementation Capabilities
+> - [x] Error Handling: Unified exception class `MediaError`, e.g., webcodecs not supported, video file without video track, etc.
+> - [x] Progress Callback: Frame rendering progress
+> - [x] Result Export: Blob
 > - [x] Packaging for NPM
+
 
 ## Core Positioning
 This library focuses on **lowering the threshold for video generation** and enabling rapid implementation of core video generation scenarios. For more refined audio and video processing needs, we recommend using the `mediabunny` library with richer underlying capabilities.
@@ -52,12 +66,12 @@ This library focuses on **lowering the threshold for video generation** and enab
 
 bun
 ```zsh
-bun add @diqye/media-stitcher
+bun add @diqye/media-stitcher mediabunny
 ```
 or 
 npm
 ```zsh
-npm i -s @diqye/media-stitcher
+npm i -s @diqye/media-stitcher mediabunny
 ```
 
 ## Usage

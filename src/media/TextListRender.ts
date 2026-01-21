@@ -1,5 +1,8 @@
 import type { Render, Timerange } from "../const"
 
+/**
+ * 文本绘制到视频类
+ */
 export class TextListRender {
     textList: ({
         text: string,
@@ -22,6 +25,11 @@ export class TextListRender {
     private constructor(textList: typeof this.textList) {
         this.textList = textList
     }
+    /**
+     * 创建实例
+     * @param textList 
+     * @returns 
+     */
     static fromTextList(textList: TextListRender["textList"]) {
         return new this(textList)
     }
@@ -35,6 +43,11 @@ export class TextListRender {
             return true
         })
     }
+
+    /**
+     * 创建渲染函数以供`MediaStitcher`使用
+     * @returns 
+     */
     public createReader() :Render {
         return async(frame,ctx) =>{
             let context = ctx.canvas.getContext("2d")

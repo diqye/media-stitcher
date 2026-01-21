@@ -18,6 +18,10 @@ export class MediaAudio extends createBase<Promise<MediaAudio>>() {
         super()
         this.ctx = ctx
     }
+    /**
+     * 创建音频数据函数以供`MediaStitcher`使用
+     * @returns 
+     */
     createAudio(): AsyncAudioBuffer {
         return (duration:number) => {
             if (this.ctx.audioTrack == null) throw MediaError.fromStatus("no_audio_track", "该视频没有音频轨道")
@@ -42,6 +46,10 @@ export class MediaAudio extends createBase<Promise<MediaAudio>>() {
         })
     }
 
+    /**
+     * 
+     * @returns 获取音频时长
+     */
     public getDurationInSeconds() {
         return this.ctx.range.durationInSeconds
     }
