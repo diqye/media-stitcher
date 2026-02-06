@@ -254,6 +254,77 @@ async function test5(){
         <video controls src="${url}" />
     `
 }
+async function test6(){
+    const video = await MediaVideo.fromUrl("https://vod.pipi.cn/fec9203cvodtransbj1251246104/2cb008ef5285890807135914942/v.f42906.mp4")
+    let div = await simpleStart()
+    const blob = await MediaStitcher.init({
+        duration: Unit.fromSeconds(20),
+        width: 500,
+        height: 400,
+        fps: 30
+    })
+    .addRenderRange({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(5),
+        playbackRate: 2
+    },video.createRender())
+    .addRenderRange({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(5),
+    },TextListRender.fromTextList([{
+        text: "2倍速",
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(5)
+    }]).createReader())
+    .addAudio({
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(5),
+        playbackRate: 2
+    },video.createAudio())
+    .addRenderRange({
+        start: Unit.fromSeconds(5),
+        duration: Unit.fromSeconds(5),
+    },video.createRender())
+    .addRenderRange({
+        start: Unit.fromSeconds(5),
+        duration: Unit.fromSeconds(5),
+    },TextListRender.fromTextList([{
+        text: "1倍速",
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(5)
+    }]).createReader())
+    .addAudio({
+        start: Unit.fromSeconds(5),
+        duration: Unit.fromSeconds(5),
+    },video.createAudio())
+
+    .addRenderRange({
+        start: Unit.fromSeconds(10),
+        duration: Unit.fromSeconds(10),
+        playbackRate: 0.5,
+    },video.createRender())
+    .addRenderRange({
+        start: Unit.fromSeconds(10),
+        duration: Unit.fromSeconds(10),
+    },TextListRender.fromTextList([{
+        text: "0.5倍速",
+        start: Unit.fromSeconds(0),
+        duration: Unit.fromSeconds(10)
+    }]).createReader())
+    .addAudio({
+        start: Unit.fromSeconds(10),
+        duration: Unit.fromSeconds(10),
+        playbackRate: 0.5
+    },video.createAudio())
+    .deinitAndFinalize((current,total)=>{
+        div.innerText = current + "/" + total + " frames"
+    })
+    
+    const url = URL.createObjectURL(blob)
+    div.innerHTML = `
+        <video controls src="${url}" />
+    `
+}
 function runTest() {
     simpleLog("测试1，生成5秒的视频")
     generate5s()
@@ -269,6 +340,9 @@ function runTest() {
 
     simpleLog("测试5, 解决声音click问题")
     test5()
+
+    simpleLog("测试6, 视频合成支持倍速")
+    test6()
 }
 
 await runTest()

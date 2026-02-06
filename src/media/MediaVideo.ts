@@ -12,10 +12,6 @@ type VideoContext = {
         startInSeconds: number,
         durationInSeconds: number
     },
-    /**
-     * 未实现 TODO
-     */
-    speed: number,
 }
 export class MediaVideo extends createBase<Promise<MediaVideo>>() {
     ctx: VideoContext
@@ -50,7 +46,6 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
         return new MediaVideo({
             videoTrack: videoT ?? undefined,
             audioTrack: audioT ?? undefined,
-            speed: 1,
             range: {
                 startInSeconds: 0,
                 durationInSeconds: duration ?? 0
@@ -67,6 +62,7 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
         this.transformFn = fn
         return this
     }
+
 
     /**
      * 视频时长
@@ -90,14 +86,15 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
         }
     }
     /**
-     * 从时间切片上创建新的实例
+     * 按照时间切片创建新的实例
+     * @param range 若不传值，浅copy一个新对象
      */
-    sliceRange(range:VideoContext["range"]) {
+    sliceRange(range?:VideoContext["range"]) {
         return new MediaVideo({
             ...this.ctx,
             range: {
-                startInSeconds: this.ctx.range.startInSeconds + range.startInSeconds,
-                durationInSeconds: Math.min(this.ctx.range.durationInSeconds,range.durationInSeconds)
+                startInSeconds: this.ctx.range.startInSeconds + (range?.startInSeconds ?? 0),
+                durationInSeconds: Math.min(this.ctx.range.durationInSeconds,(range?.durationInSeconds??this.ctx.range.durationInSeconds))
             }
         })
     }
@@ -118,7 +115,7 @@ export class MediaVideo extends createBase<Promise<MediaVideo>>() {
             }
             const sink = this.videoSinkCached
             const startTime = ctx.range.startInSeconds
-            const currentSeconds = startTime + Unit.fromFrames(currentFrame).toSeconds(context.fps)
+            const currentSeconds = startTime + (Unit.fromFrames(currentFrame).toSeconds(context.fps) * (context.timerange?.playbackRate ?? 1))
             const targetCurrent = Math.min(currentSeconds, startTime + ctx.range.durationInSeconds)
 
             const canvasWrapped = await sink.getCanvas(targetCurrent)

@@ -5,9 +5,12 @@ export type Timerange = {
     duration: Unit,
     start: Unit
 }
+export type VideoRange = Timerange & {
+    playbackRate?: number
+}
 
 export type RenderContext = {
-    timerange: Timerange,
+    timerange: VideoRange,
     currentFrameInOutput: number
 } & Context
 

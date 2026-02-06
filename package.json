@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/diqye/media-stitcher/issues"
   },
-  "version": "0.1.2",
+  "version": "0.1.3",
   "scripts": {
     "dev": "bun --hot test/index.html",
     "build": "bun run build.ts"

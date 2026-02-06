@@ -1,5 +1,5 @@
 import { AudioBufferSource, BufferTarget, CanvasSource, getFirstEncodableAudioCodec, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_MEDIUM, TextSubtitleSource, WebMOutputFormat } from "mediabunny"
-import { MediaError, type AsyncAudioBuffer, type Context, type Render, type Timerange } from "./const"
+import { MediaError, type AsyncAudioBuffer, type Context, type Render, type Timerange, type VideoRange } from "./const"
 import {Unit} from "./Unit"
 
 
@@ -11,7 +11,7 @@ export class MediaStitcher {
     context: Context 
 
     deinited: boolean = false
-    renderList: [Timerange,Render][] = []
+    renderList: [VideoRange,Render][] = []
     audioList: [AudioRange, AsyncAudioBuffer][] = []
     webvtt?: string
 
@@ -48,11 +48,11 @@ export class MediaStitcher {
 
     /**
      * 将视频、图片和自定义canvas渲染到指定的时间区间
-     * @param timerange 从输出视频的什么时间开始持续多长时间
+     * @param timerange 从输出视频的什么时间开始持续多长时间,以及视频倍速
      * @param render 渲染函数
      * @returns 
      */
-    public addRenderRange(timerange:Timerange,render: Render) {
+    public addRenderRange(timerange:VideoRange,render: Render) {
         this.renderList.push([timerange,render])
         return this
     }
@@ -181,21 +181,30 @@ export class MediaStitcher {
         )
 
         for(const [range,createAudioBuff] of this.audioList) {
+            const rate = range.playbackRate ?? 1
+
             const start  = range.start.toSeconds(ctx.fps)
-            const duration = range.duration.toSeconds(ctx.fps)
+            const duration = range.duration.toSeconds(ctx.fps) * rate
             const audiobuff = await createAudioBuff(duration)
+
+            const durationInSeconds = audiobuff.durationInSeconds / rate
+
             const sourceStart = start + audiobuff.timestamp
             const volume = range.volume ?? 1
             let gain = audioContext.createGain()
             gain.gain.setValueAtTime(0,sourceStart)
             gain.gain.linearRampToValueAtTime(volume,sourceStart + 0.002)
-            gain.gain.setValueAtTime(volume,sourceStart + audiobuff.durationInSeconds - 0.002)
-            gain.gain.linearRampToValueAtTime(0,sourceStart + audiobuff.durationInSeconds)
+
+            // 容易混校1 倍速后的时长
+            gain.gain.setValueAtTime(volume,sourceStart + durationInSeconds - 0.002)
+            gain.gain.linearRampToValueAtTime(0,sourceStart + durationInSeconds)
             let source = audioContext.createBufferSource()
             source.buffer = audiobuff.buff
             source.connect(gain)
-            source.playbackRate.value = range.playbackRate ?? 1
+            source.playbackRate.value = rate
             gain.connect(audioContext.destination)
+
+            // 容易混校2 原始倍速的时长
             source.start(sourceStart,0,audiobuff.durationInSeconds)
         }
 
